@@ -1,4 +1,4 @@
-# encoding: GBK
+# encoding: UTF-8
 import json
 import os
 import time
@@ -57,13 +57,16 @@ class Analyze(Thread):
                 print(f"\033[33m[*]{self.file_path}".replace("\\", "/"))
                 self.count += 1
             for k, v in preview_content.items():
-                if reg_cap:
-                    print("\033[00m%-6d %s" % (int(v), html2text(k).replace(key, f"\033[31m{key}\033[00m")))
-                else:
-                    i_key_str = html2text(k)
-                    for k in key_list:
-                        i_key_str = i_key_str.replace(k, f"\033[31m{k}\033[00m")
-                    print("\033[00m%s" % (get_pure_text(i_key_str)))
+                try:
+                    if reg_cap:
+                        print("\033[00m%-6d %s" % (int(v), (html2text(k).replace(key, f"\033[31m{key}\033[00m"))))
+                    else:
+                        i_key_str = html2text(k)
+                        for _k in key_list:
+                            i_key_str = i_key_str.replace(_k, f"\033[31m{_k}\033[00m")
+                        print("\033[00m%-6d %s" % (int(v), html2text(i_key_str).replace(key, f"\033[31m{key}\033[00m")))
+                except Exception:
+                    pass
             print("-" * 60)
             count += 1
             result_list.append(json.dumps({
@@ -74,7 +77,9 @@ class Analyze(Thread):
                 "preview_content": preview_content,
                 "line_content": line_content,
                 "view": False,
-                "lock": False
+                "lock": False,
+                "name_copy": 0,
+                "path_copy": 0,
             }))
 
         global result_list
@@ -83,8 +88,6 @@ class Analyze(Thread):
                      self.line_list]
         for line in line_list:
             try:
-                # if self.file_name == "78fd31ff2c3e8878eb2cbf15dacc59f3.js":
-                #     print(line.encode())
                 line = line.lstrip()
                 index = find_str(line, key)
                 if index != -1:
@@ -104,11 +107,8 @@ class Analyze(Thread):
                             }
                             append_result()
                             index = find_str(line, key, index + 150)
+            finally:
                 line_num += 1
-            except Exception as e:
-                print(self.file_name, end=",")
-                print(e)
-                pass
 
 
 def find_str(text, keyword, start=0):
@@ -121,11 +121,10 @@ def find_str(text, keyword, start=0):
     return index
 
 
-# »ñÈ¡Ç°ºóÇøÓòµÄ×Ö·û´®
+# è·å–å‰ååŒºåŸŸçš„å­—ç¬¦ä¸²
 def get_key_str(file, line_num):
     preview_content = {}
     content = ""
-    key_str = ""
     start_line = line_num - l_gap if line_num - l_gap > 0 else 0
     index = 0
     for i in file[start_line: line_num + r_gap]:
@@ -143,7 +142,7 @@ def get_long_line(line, line_num, index):
     start = index - 180 if index > 180 else 0
     count = 0
     content = ""
-    while (start < len(line)) and count < 5:
+    while (start < len(line)) and count < 7:
         html_line = text2html(line[start: start + 60])
         preview_content[html_line] = line_num + 1
         content += (html_line + "\n")
@@ -177,7 +176,10 @@ def analyze_file():
                 if not ("." in f and f.split(".")[-1] in ext):
                     continue
             r = r.strip("\\") + "\\"
-            file_content = open(f"{r}{f}", "rb").read()
+            try:
+                file_content = open(f"{r}{f}", "rb").read()
+            except:
+                pass
             if filter_keys:
                 flag = False
                 for i in filter_keys:
@@ -192,8 +194,6 @@ def analyze_file():
                 for i in analyze_list:
                     i.join()
                 analyze_list = []
-            if count >= 10:
-                return
     for i in analyze_list:
         i.start()
     for i in analyze_list:
@@ -220,12 +220,18 @@ def save_results():
 
 def analyze(f_root_dir, f_key, f_ext, f_filter="", f_reg_cap=True, f_allow_cover=False):
     global count, root_dir, key, ext, result_list, reg_cap, allow_cover, template_html_file, key_list, filter_keys
+    if not (f_root_dir and os.path.exists(f_root_dir)):
+        raise Exception("è¯·è¾“å…¥æœ‰æ•ˆæ ¹è·¯å¾„")
+    if not f_key:
+        raise Exception("è¯·è¾“å…¥æœ‰æ•ˆå…³é”®è¯")
     count = 0
     result_list = []
     root_dir = f_root_dir.replace("/", "\\").strip("\\")
     key = f_key
     if f_filter:
         filter_keys = f_filter.split(",")
+    else:
+        filter_keys = []
     key_list = [key]
     ext = f_ext
     reg_cap = f_reg_cap
@@ -236,14 +242,13 @@ def analyze(f_root_dir, f_key, f_ext, f_filter="", f_reg_cap=True, f_allow_cover
     start = time.time()
     analyze_file()
     result_list = sorted(result_list, key=lambda x: json.loads(x)["name"])
-    # print(push_str)
     result_file_name = save_results()
     all_time = "%.2f" % (time.time() - start)
-    print(f"\033[32m[+]·ÖÎöÍê±Ï£¬ÓÃÊ±{all_time}s£¬¹²ÓĞ{count}ÌõÆ¥ÅäÊı¾İ£¬½á¹û±£´æÔÚ{result_file_name}ÎÄ¼şÖĞ")
+    print(f"\033[32m[+]åˆ†æå®Œæ¯•ï¼Œç”¨æ—¶{all_time}sï¼Œå…±æœ‰{count}æ¡åŒ¹é…æ•°æ®ï¼Œç»“æœä¿å­˜åœ¨{result_file_name}æ–‡ä»¶ä¸­")
     return all_time, count, result_file_name
 
 
 if __name__ == '__main__':
-    analyze("F:\²âÊÔ³ÌĞò\Ô´Âë\panabit_new", "exec", "php",f_filter="", f_allow_cover=True)
+    analyze("F:\æµ‹è¯•ç¨‹åº\Panabit\Panabit_SMB\PanabitSMB_SUIr1p7_20210827_FreeBSD9", "download", "", f_filter="", f_allow_cover=False, f_reg_cap=True)
 
     # webbrowser.open(f"file://{os.getcwd()}/{result_file_name}")

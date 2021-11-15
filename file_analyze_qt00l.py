@@ -97,11 +97,9 @@ class Ui_MainWindow(object):
     def analyze(self):
         try:
             self.root_dir = self.root_path_text.text()
-            self.key = self.key_text.text()
-            if not (self.root_dir and self.key and os.path.exists(self.root_dir)):
-                raise Exception("请输入有效根路径及关键词")
-            self.filter = self.filter_text.text()
-            self.ext = self.ext_text.text()
+            self.key = self.key_text.text().strip()
+            self.filter = self.filter_text.text().strip()
+            self.ext = self.ext_text.text().strip()
             self.ignore_cap = self.reg_cap_btn.isChecked()
             self.allow_cover = self.allow_cover_btn.isChecked()
             self.auto_result = self.auto_result_btn.isChecked()
