@@ -1,0 +1,338 @@
+<link rel="stylesheet" href="../css/bootstrap.min.css">
+<script src="../js/jquery.js"></script>
+<script src="../js/vue.js"></script>
+<style>
+    .panel {
+        word-wrap: break-word;
+
+        word-break: keep-all;
+
+        overflow: hidden;
+    }
+
+    th {
+        text-align: center;
+        font-weight: normal;
+        font-size: 14px;
+
+    }
+
+    th:hover {
+        background-color: #ccdde6;
+    }
+
+    td {
+        text-align: center;
+        font-weight: normal;
+        font-size: 14px;
+
+    }
+
+    a.navbar-brand {
+        color: white;
+    }
+
+    a.navbar-brand:hover {
+        text-decoration: none
+    }
+
+    a:link {
+        color: inherit;
+        text-decoration: none
+    }
+
+    .filter-label {
+        height: 10px;
+        font-size: small;
+        margin-top: 3px;
+    }
+
+    .file-content {
+        text-align: left;
+    }
+
+    .view-btn {
+        text-align: right;
+        font-size: medium;
+        color: #d9534f;
+    }
+
+    .preview-text {
+        border: 1px solid #9d9d9d;
+        border-radius: 4px;
+        overflow-y: auto;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .emphasize {
+        color: #d9534f;
+    }
+
+    .line-number {
+        color: #9d9d9d;
+    }
+
+    .name-label {
+        font-weight: normal;
+        margin-top: 5px;
+    }
+
+    .file-name {
+        font-weight: bold;
+    }
+
+    .file-path {
+        color: chocolate;
+        text-align: left;
+    }
+</style>
+
+
+<div id="app">
+    <div class="navbar navbar-fixed-top"
+         style="position: fixed; height:60px ;z-index: 10000; width: 100%; background: rgb(8, 103, 193) none repeat scroll 0% 0%;">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#" style="color:white; margin-top: 4px">File Analysis Result</a>
+        </div>
+    </div>
+
+
+    <div class="container-fluid" style="width: 95%; margin-top: 50px">
+        <div class="panel panel-default" style="margin-top: 50px">
+            <div class="panel-heading" style="background-color: white; border-bottom: none">
+
+
+                <!--过滤标签区域-->
+                <div class="col-md-4">
+                    <span style="font-size: larger; margin-right: 3px; margin-left: -10px">
+                    过滤关键词</span>
+                    <label class="label label-info filter-label"><a
+                            href="javascript:void(0)"><span class="glyphicon glyphicon-record"></span>
+                        {{major_key}}</a></label>
+                    <template v-for="key in include_keys">
+                        <label class="label label-success filter-label" @click="del_in_key(key)"><a
+                                href="javascript:void(0)" style="margin-left: 3px">
+                            <span class=" glyphicon glyphicon-triangle-top"></span> {{key}}
+                            &times;</a></label>&nbsp;
+                    </template>
+                    <template v-for="key in exclude_keys">
+                        <label class="label label-danger label-lg filter-label" @click="del_ex_key(key)"><a
+                                href="javascript:void(0)" style="margin-right: 3px">
+                            <span class="glyphicon glyphicon-triangle-bottom"></span> {{key}}
+                            &times;</a></label>&nbsp;
+                    </template>
+                </div>
+
+                <!--新增过滤区域-->
+                <div class="pull-right col-md-8">
+                    <div class="col-md-1">
+                        <label class="name-label">文件名</label>
+                        <!--                        <span class="glyphicon glyphicon-play-circle"></span>-->
+                    </div>
+                    <div class="col-md-3">
+                        <input class="pull-right form-control" v-model="target_file"/>
+                    </div>
+
+                    <div class="col-md-3">
+                        <input class="pull-right form-control" v-model="include_key" @keyup.enter="add_in_key"/>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-default text-primary" style="color: #337ab7" @click="add_in_key">
+                            包含
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <input class="pull-right form-control" v-model="exclude_key" @keyup.enter="add_ex_key"/>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-default" style="color: #d9534f" @click="add_ex_key">不含</button>
+                    </div>
+                </div>
+
+            </div>
+            <div class="panel-body"></div>
+            <table class="table table-responsive">
+                <tr class="alert-info" style="color: black">
+                    <th class="col-md-1">序号</th>
+                    <th class="col-md-2">文件名</th>
+                    <th class="col-md-3">文件路径</th>
+                    <th class="col-md-6">预览</th>
+                </tr>
+                <template v-for="(file, index) in search">
+                    <tr >
+                        <td>
+                            <span class="col-md-1 col-md-pull-1">
+                            <span class="glyphicon glyphicon-lock text-left" v-if="file.lock"
+                                  style="color: #d9534f"></span>
+                            </span>
+                            <span class="col-md-6 col-md-pull-1">
+                            {{index+1}}
+                            </span>
+                        </td>
+                        <td class="file-name">{{ file.name }}</td>
+                        <td class="file-path">{{file.path}}</td>
+                        <td class="file-content" @mouseover="mouseOver(file)" @mouseleave="mouseLeave(file)" @click="fix_file(file)">
+
+
+                            <div class="view-btn col-md-1 col-md-push-1 text-right"><a style="color: inherit; display: block; margin-right: -20px"
+                                                                         href="javascript:void(0)" class="extend-icon">
+                                <span class="glyphicon glyphicon-expand" v-if="!file.view"></span>
+                                <span class="glyphicon glyphicon-collapse-down" v-else></span>
+                            </a></div>
+
+
+                            <div class="file-content col-md-11">
+                                <!--行号-->
+                                <div class="line-number col-md-2" style="text-align: right; margin-right: -20px">
+                                    <div v-if="!file.view">
+                                        <template v-for="(value, key) in file.line_content">
+                                            {{value}}
+                                        </template>
+                                    </div>
+                                    <div v-if="file.view">
+                                        <template v-for="(value, key) in file.preview_content">
+                                            {{value}}<br>
+                                        </template>
+                                    </div>
+                                </div>
+                                <!--行内容-->
+                                <div class="line-text col-md-10" >
+                                    <!--单行内容-->
+                                    <div class="line-text col-md-12" v-if="!file.view">
+                                        <template v-for="(value, key) in file.line_content">
+                                        <span v-html="switch_key_str(key)">
+                                        </span>
+                                        </template>
+                                    </div>
+                                    <!--预览内容-->
+                                    <div class="preview-text col-md-12" style="display: block; height: 160px;" v-if="file.view">
+                                        <template v-for="(value, key) in file.preview_content">
+                                        <span v-html="switch_key_str(key)">
+                                        </span>
+                                            <br>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+            </table>
+
+        </div>
+    </div>
+</div>
+<script>
+    <!--格式化关键字符串-->
+    Vue.prototype.switch_key_str = (value) => {
+        while (value.includes("  ")) {
+            value = value.replace("  ", "&nbsp;&nbsp;")
+        }
+        while (value.includes("\t")) {
+            value = value.replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;")
+        }
+        if (root.reg_cap) {
+            value = value.replaceAll(root.major_key, "<span class='emphasize'>" + root.major_key + "</span>")
+        } else {
+            key_list = [root.major_key]
+            var index = value.toLowerCase().indexOf(root.major_key)
+            while (index !== -1) {
+                if (value.substring(index, index + root.major_key.length) !== root.major_key && !(key_list.includes(value.substring(index, index + root.major_key.length))))
+                    key_list.push(value.substring(index, index + root.major_key.length))
+                index = value.toLowerCase().indexOf(root.major_key, index + root.major_key.length)
+            }
+            // alert(root.major_key);
+            for (i in key_list) {
+                value = value.replaceAll(key_list[i], "<span class='emphasize'>" + key_list[i] + "</span>")
+            }
+        }
+        for (i in root.include_keys) {
+            value = value.replaceAll(root.include_keys[i], "<span class='emphasize'>" + root.include_keys[i] + "</span>")
+        }
+        return value
+    }
+    var root = new Vue({
+        el: '#app',
+        data: {
+            major_key: "exec",
+            include_keys: [],
+            exclude_keys: [],
+            include_key: "",
+            exclude_key: "",
+            target_file: "",
+            files: [],
+            reg_cap: false
+        },
+        methods: {
+            mouseOver: function (file) {
+                file.view = true
+            },
+            mouseLeave: function (file) {
+                if (!file.lock) {
+                    file.view = false
+                }
+            },
+            add_in_key: function () {
+                if (!(this.include_keys.includes(this.include_key)) && this.include_key) {
+                    this.include_keys.push(this.include_key);
+                }
+                this.include_key = ""
+            },
+            add_ex_key: function () {
+                if (!(this.exclude_keys.includes(this.exclude_key)) && this.exclude_key) {
+                    this.exclude_keys.push(this.exclude_key);
+                }
+                this.exclude_key = ""
+            },
+            del_in_key: function (key) {
+                this.include_keys.pop(key);
+            },
+            del_ex_key: function (key) {
+                this.exclude_keys.pop(key);
+            },
+            fix_file: function (file) {
+                file.lock = !file.lock
+            }
+        },
+        computed: {
+            search: function () {
+                var files = this.files.filter(ele => {
+                    var filter = true;
+                    if (this.include_keys) {
+                        if (!ele.content.includes(this.include_key)) {
+                            filter = false
+                        }
+                    }
+                    if (this.exclude_key) {
+                        if (ele.content.includes(this.exclude_key)) {
+                            filter = false
+                        }
+                    }
+                    if (this.target_file) {
+                        if (!ele.name.includes(this.target_file)) {
+                            filter = false
+                        }
+                    }
+                    for (i in this.include_keys) {
+                        if (!ele.content.includes(this.include_keys[i])) {
+                            filter = false
+                        }
+                    }
+                    for (i in this.exclude_keys) {
+                        if (ele.content.includes(this.exclude_keys[i]) || ele.path.includes(this.exclude_keys[i])) {
+                            filter = false
+                        }
+                    }
+                    return filter
+                })
+                return files
+            }
+        },
+    })
+
+
+    root.files.push({"id": 1, "name": "ajax_alarm.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_alarm.php", "content": "if ($action == \"logstat_reset\")\n{\n\t$cmd = PANALOGEYE.\" serhit config logstat_reset=1\";\n\texec($cmd, $out, $ret);\n}\n\nif ($action == \"showstatus\")\n", "preview_content": {"if ($action == \"logstat_reset\")": 11, "{": 12, "\t$cmd = PANALOGEYE.\" serhit config logstat_reset=1\";": 13, "\texec($cmd, $out, $ret);": 14, "}": 15, "": 16, "if ($action == \"showstatus\")": 17}, "line_content": {"exec($cmd, $out, $ret);": 14}, "view": false, "lock": false},{"id": 2, "name": "ajax_alarm.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_alarm.php", "content": "\t$rows = array();\n\n\t$cmd = PANALOGEYE.\" serhit stat logstat=1\";\n\texec($cmd, $out, $ret);\n\tforeach($out as $obj) {\n\t\tlist($tag, $name, $stat) = explode(' ', $obj);\n\t\tarray_push($rows, array(\n", "preview_content": {"\t$rows = array();": 19, "": 20, "\t$cmd = PANALOGEYE.\" serhit stat logstat=1\";": 21, "\texec($cmd, $out, $ret);": 22, "\tforeach($out as $obj) {": 23, "\t\tlist($tag, $name, $stat) = explode(' ', $obj);": 24, "\t\tarray_push($rows, array(": 25}, "line_content": {"exec($cmd, $out, $ret);": 22}, "view": false, "lock": false},{"id": 3, "name": "ajax_alarm.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_alarm.php", "content": "\t// logstat_server=192.168.8.21\n\t// logstat_port=10666\n\t$cmd = PANALOGEYE.\" serhit stat | grep logstat\";\n\texec($cmd, $out, $ret);\n\n\t$json = array();\n\tforeach($out as $obj) {\n", "preview_content": {"\t// logstat_server=192.168.8.21": 36, "\t// logstat_port=10666": 37, "\t$cmd = PANALOGEYE.\" serhit stat | grep logstat\";": 38, "\texec($cmd, $out, $ret);": 39, "": 40, "\t$json = array();": 41, "\tforeach($out as $obj) {": 42}, "line_content": {"exec($cmd, $out, $ret);": 39}, "view": false, "lock": false},{"id": 4, "name": "ajax_alarm.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_alarm.php", "content": "\t$interval = postval(\"interval\");\n\n\t$cmd = PANALOGEYE.\" serhit config logstat_server=$server logstat_interval=$interval\";\n\texec($cmd, $out, $ret);\n}\n?&gt;\n\n", "preview_content": {"\t$interval = postval(\"interval\");": 68, "": 74, "\t$cmd = PANALOGEYE.\" serhit config logstat_server=$server logstat_interval=$interval\";": 70, "\texec($cmd, $out, $ret);": 71, "}": 72, "?&gt;": 73}, "line_content": {"exec($cmd, $out, $ret);": 71}, "view": false, "lock": false},{"id": 5, "name": "ajax_assets.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_assets.php", "content": "\t}\n\n\t$cmd = PANALOGEYE.\" alssocket config dashboard_assets_grpid=$id\";\n\texec($cmd);\n\n\toutputres(\"yes\", \"\");\n}\n", "preview_content": {"\t}": 399, "": 403, "\t$cmd = PANALOGEYE.\" alssocket config dashboard_assets_grpid=$id\";": 401, "\texec($cmd);": 402, "\toutputres(\"yes\", \"\");": 404, "}": 405}, "line_content": {"exec($cmd);": 402}, "view": false, "lock": false},{"id": 6, "name": "ajax_databoard.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_databoard.php", "content": "\t$sum = 0;\n\n\t$cmd = PANALOGEYE.\" receiver list\";\n\texec($cmd, $out, $ret);\n\tforeach($out as $val) {\n\t\tlist($name, $port, $num) = explode(' ', $val);\n\n", "preview_content": {"\t$sum = 0;": 245, "": 251, "\t$cmd = PANALOGEYE.\" receiver list\";": 247, "\texec($cmd, $out, $ret);": 248, "\tforeach($out as $val) {": 249, "\t\tlist($name, $port, $num) = explode(' ', $val);": 250}, "line_content": {"exec($cmd, $out, $ret);": 248}, "view": false, "lock": false},{"id": 7, "name": "ajax_databoard.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_databoard.php", "content": "\telse\n\t\tarray_push($ip, 0);\n\t */\n\texec(PANALOGEYE.\" ipnum list\", $out, $ret);\n\tforeach($out as $val) {\n\t\t$ds = explode('=', trim($val));\n\t\tarray_push($ip, (int)$ds[1]);\n", "preview_content": {"\telse": 691, "\t\tarray_push($ip, 0);": 692, "\t */": 693, "\texec(PANALOGEYE.\" ipnum list\", $out, $ret);": 694, "\tforeach($out as $val) {": 695, "\t\t$ds = explode('=', trim($val));": 696, "\t\tarray_push($ip, (int)$ds[1]);": 697}, "line_content": {"exec(PANALOGEYE.\" ipnum list\", $out, $ret);": 694}, "view": false, "lock": false},{"id": 8, "name": "ajax_delaymonitor.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_delaymonitor.php", "content": "\t$npm_cnt = 0;\n\n\t$cmd = PANALOGEYE.\" receiver stat tag=npm\";\n\texec($cmd, $out, $ret);\n\tforeach($out as $obj) {\n\t\tlist($tag, $val) = explode('=', trim($obj));\n\t\tif ($tag == \"npm_cnt\") {\n", "preview_content": {"\t$npm_cnt = 0;": 308, "": 309, "\t$cmd = PANALOGEYE.\" receiver stat tag=npm\";": 310, "\texec($cmd, $out, $ret);": 311, "\tforeach($out as $obj) {": 312, "\t\tlist($tag, $val) = explode('=', trim($obj));": 313, "\t\tif ($tag == \"npm_cnt\") {": 314}, "line_content": {"exec($cmd, $out, $ret);": 311}, "view": false, "lock": false},{"id": 9, "name": "ajax_logstatus.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_logstatus.php", "content": "}\n\n$cmd = PANALOGEYE.\" $action stat\";\nexec($cmd, $out, $ret);\nforeach($out as $line) {\n\tlist($tag, $val) = explode('=', trim($line));\n\tswitch($tag) {\n", "preview_content": {"}": 14, "": 15, "$cmd = PANALOGEYE.\" $action stat\";": 16, "exec($cmd, $out, $ret);": 17, "foreach($out as $line) {": 18, "\tlist($tag, $val) = explode('=', trim($line));": 19, "\tswitch($tag) {": 20}, "line_content": {"exec($cmd, $out, $ret);": 17}, "view": false, "lock": false},{"id": 10, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t$upfile = $_FILES[\"file\"];\n\n\t$appdir = \"/tmp/app/\";\n\texec(\"rm -rf $appdir\");\n\tmkdir($appdir);\n\n\tsystem(\"rm -rf $appdir/*\");\n", "preview_content": {"\t$upfile = $_FILES[\"file\"];": 20, "": 25, "\t$appdir = \"/tmp/app/\";": 22, "\texec(\"rm -rf $appdir\");": 23, "\tmkdir($appdir);": 24, "\tsystem(\"rm -rf $appdir/*\");": 26}, "line_content": {"exec(\"rm -rf $appdir\");": 23}, "view": false, "lock": false},{"id": 11, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t}\n\n\t/* \u68c0\u67e5\u662f\u5426\u6709app.inf */\n\texec(\"tar ztvf $dstfile | grep app.inf\", $out, $ret);\n\tif (!is_array($out) || count($out) == 0) {\n\t\toutputres(\"no\", \"\u6b64APP\u5305\u7f3a\u5c11\u5fc5\u8981\u6709\u6587\u4ef6.\");\n\t\texit;\n", "preview_content": {"\t}": 32, "": 33, "\t/* \u68c0\u67e5\u662f\u5426\u6709app.inf */": 34, "\texec(\"tar ztvf $dstfile | grep app.inf\", $out, $ret);": 35, "\tif (!is_array($out) || count($out) == 0) {": 36, "\t\toutputres(\"no\", \"\u6b64APP\u5305\u7f3a\u5c11\u5fc5\u8981\u6709\u6587\u4ef6.\");": 37, "\t\texit;": 38}, "line_content": {"exec(\"tar ztvf $dstfile | grep app.inf\", $out, $ret);": 35}, "view": false, "lock": false},{"id": 12, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t}\n\n\t/* \u89e3\u538b */\n\texec(\"tar zxf $dstfile -C $appdir\");\n\n\t$appname = getappval(\"app_name\", \"$appdir/app.inf\");\n\tif ($appname == \"\") {\n", "preview_content": {"\t}": 39, "": 43, "\t/* \u89e3\u538b */": 41, "\texec(\"tar zxf $dstfile -C $appdir\");": 42, "\t$appname = getappval(\"app_name\", \"$appdir/app.inf\");": 44, "\tif ($appname == \"\") {": 45}, "line_content": {"exec(\"tar zxf $dstfile -C $appdir\");": 42}, "view": false, "lock": false},{"id": 13, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t$appname = getappval(\"app_name\", \"$appdir/app.inf\");\n\tif ($appname == \"\") {\n\t\toutputres(\"no\", \"\u83b7\u53d6\u82f1\u6587\u540d\u79f0\u5931\u8d25.\");\n\t\texec(\"rm -rf $appdir\");\n\t\texit;\n\t}\n\n", "preview_content": {"\t$appname = getappval(\"app_name\", \"$appdir/app.inf\");": 44, "\tif ($appname == \"\") {": 45, "\t\toutputres(\"no\", \"\u83b7\u53d6\u82f1\u6587\u540d\u79f0\u5931\u8d25.\");": 46, "\t\texec(\"rm -rf $appdir\");": 47, "\t\texit;": 48, "\t}": 49, "": 50}, "line_content": {"exec(\"rm -rf $appdir\");": 47}, "view": false, "lock": false},{"id": 14, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t}\n\n\tunset($out);\n\texec(\"uname -r | cut -d'.' -f1\", $out, $ret);\n\t$app_sys = getappval(\"app_sys\", \"$appdir/app.inf\");\n\tif (strstr($app_sys, $out[0]) == false) {\n\t\toutputres(\"no\", \"\u6b64\u7cfb\u7edf\u7248\u672c\u4e3a\".$out[0].\"\uff0c\u6682\u4e0d\u652f\u6301\u6b64APP\");\n", "preview_content": {"\t}": 49, "": 50, "\tunset($out);": 51, "\texec(\"uname -r | cut -d'.' -f1\", $out, $ret);": 52, "\t$app_sys = getappval(\"app_sys\", \"$appdir/app.inf\");": 53, "\tif (strstr($app_sys, $out[0]) == false) {": 54, "\t\toutputres(\"no\", \"\u6b64\u7cfb\u7edf\u7248\u672c\u4e3a\".$out[0].\"\uff0c\u6682\u4e0d\u652f\u6301\u6b64APP\");": 55}, "line_content": {"exec(\"uname -r | cut -d'.' -f1\", $out, $ret);": 52}, "view": false, "lock": false},{"id": 15, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t$app_sys = getappval(\"app_sys\", \"$appdir/app.inf\");\n\tif (strstr($app_sys, $out[0]) == false) {\n\t\toutputres(\"no\", \"\u6b64\u7cfb\u7edf\u7248\u672c\u4e3a\".$out[0].\"\uff0c\u6682\u4e0d\u652f\u6301\u6b64APP\");\n\t\texec(\"rm -rf $appdir\");\n\t\texit;\n\t}\n\tunlink($dstfile);\n", "preview_content": {"\t$app_sys = getappval(\"app_sys\", \"$appdir/app.inf\");": 53, "\tif (strstr($app_sys, $out[0]) == false) {": 54, "\t\toutputres(\"no\", \"\u6b64\u7cfb\u7edf\u7248\u672c\u4e3a\".$out[0].\"\uff0c\u6682\u4e0d\u652f\u6301\u6b64APP\");": 55, "\t\texec(\"rm -rf $appdir\");": 56, "\t\texit;": 57, "\t}": 58, "\tunlink($dstfile);": 59}, "line_content": {"exec(\"rm -rf $appdir\");": 56}, "view": false, "lock": false},{"id": 17, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t/* preinstall */\n\t$pre = $doc.\"/app/$appname/preinstall\";\n\tif (file_exists($pre))\n\t\texec($pre);\n\n\tif (!is_dir($doc.\"/app\"))\n\t\tmkdir($doc.\"/app\");\n", "preview_content": {"\t/* preinstall */": 61, "\t$pre = $doc.\"/app/$appname/preinstall\";": 62, "\tif (file_exists($pre))": 63, "\t\texec($pre);": 64, "": 65, "\tif (!is_dir($doc.\"/app\"))": 66, "\t\tmkdir($doc.\"/app\");": 67}, "line_content": {"exec($pre);": 64}, "view": false, "lock": false},{"id": 19, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t\tmkdir($doc.\"/app\");\n\tif (!is_dir($doc.\"/app/$appname\"))\n\t\tmkdir($doc.\"/app/$appname\");\n\texec(\"cp -rf $appdir/* $doc/app/$appname/\");\n\n\t/* afterinstall */\n\t$after = $doc.\"/app/$appname/afterinstall\";\n", "preview_content": {"\t\tmkdir($doc.\"/app\");": 67, "\tif (!is_dir($doc.\"/app/$appname\"))": 68, "\t\tmkdir($doc.\"/app/$appname\");": 69, "\texec(\"cp -rf $appdir/* $doc/app/$appname/\");": 70, "": 71, "\t/* afterinstall */": 72, "\t$after = $doc.\"/app/$appname/afterinstall\";": 73}, "line_content": {"exec(\"cp -rf $appdir/* $doc/app/$appname/\");": 70}, "view": false, "lock": false},{"id": 20, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\t/* afterinstall */\n\t$after = $doc.\"/app/$appname/afterinstall\";\n\tif (file_exists($after))\n\t\texec($after);\n\n\texec(\"rm -rf $appdir\");\n\n", "preview_content": {"\t/* afterinstall */": 72, "\t$after = $doc.\"/app/$appname/afterinstall\";": 73, "\tif (file_exists($after))": 74, "\t\texec($after);": 75, "": 78, "\texec(\"rm -rf $appdir\");": 77}, "line_content": {"exec($after);": 75}, "view": false, "lock": false},{"id": 21, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\tif (file_exists($after))\n\t\texec($after);\n\n\texec(\"rm -rf $appdir\");\n\n\tunset($out);\n\texec(\"$doc/app/$appname/appctrl start\", $out, $ret);\n", "preview_content": {"\tif (file_exists($after))": 74, "\t\texec($after);": 75, "": 78, "\texec(\"rm -rf $appdir\");": 77, "\tunset($out);": 79, "\texec(\"$doc/app/$appname/appctrl start\", $out, $ret);": 80}, "line_content": {"exec(\"rm -rf $appdir\");": 77}, "view": false, "lock": false},{"id": 22, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\texec(\"rm -rf $appdir\");\n\n\tunset($out);\n\texec(\"$doc/app/$appname/appctrl start\", $out, $ret);\n\tif (count($out) &gt; 0)\n\t\toutputres(\"no\", $out[0]);\n\telse\n", "preview_content": {"\texec(\"rm -rf $appdir\");": 77, "": 78, "\tunset($out);": 79, "\texec(\"$doc/app/$appname/appctrl start\", $out, $ret);": 80, "\tif (count($out) &gt; 0)": 81, "\t\toutputres(\"no\", $out[0]);": 82, "\telse": 83}, "line_content": {"exec(\"$doc/app/$appname/appctrl start\", $out, $ret);": 80}, "view": false, "lock": false},{"id": 23, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\n\t\t\t\t/* get status */\n\t\t\t\tunset($out);\n\t\t\t\texec($appdir.\"/\".$fp.\"/appctrl status\", $out, $ret);\n\t\t\t\t$arr[\"status\"] = trim($out[0]);\n\n\t\t\t\tarray_push($rows, $arr);\n", "preview_content": {"": 103, "\t\t\t\t/* get status */": 99, "\t\t\t\tunset($out);": 100, "\t\t\t\texec($appdir.\"/\".$fp.\"/appctrl status\", $out, $ret);": 101, "\t\t\t\t$arr[\"status\"] = trim($out[0]);": 102, "\t\t\t\tarray_push($rows, $arr);": 104}, "line_content": {"exec($appdir.\"/\".$fp.\"/appctrl status\", $out, $ret);": 101}, "view": false, "lock": false},{"id": 24, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\tswitch($sta) {\n\tcase \"on\":\n\t\tmod_setval($appname, \"enable\", $sta);\n\t\texec($doc.\"/app/$appname/appctrl start\", $out, $ret);\n\t\tbreak;\n\n\tcase \"off\":\n", "preview_content": {"\tswitch($sta) {": 142, "\tcase \"on\":": 143, "\t\tmod_setval($appname, \"enable\", $sta);": 144, "\t\texec($doc.\"/app/$appname/appctrl start\", $out, $ret);": 145, "\t\tbreak;": 146, "": 147, "\tcase \"off\":": 148}, "line_content": {"exec($doc.\"/app/$appname/appctrl start\", $out, $ret);": 145}, "view": false, "lock": false},{"id": 25, "name": "ajax_module.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_module.php", "content": "\n\tcase \"off\":\n\t\tmod_setval($appname, \"enable\", $sta);\n\t\texec($doc.\"/app/$appname/appctrl stop\", $out, $ret);\n\t\tbreak;\n\t}\n\n", "preview_content": {"": 153, "\tcase \"off\":": 148, "\t\tmod_setval($appname, \"enable\", $sta);": 149, "\t\texec($doc.\"/app/$appname/appctrl stop\", $out, $ret);": 150, "\t\tbreak;": 151, "\t}": 152}, "line_content": {"exec($doc.\"/app/$appname/appctrl stop\", $out, $ret);": 150}, "view": false, "lock": false},{"id": 18, "name": "ajax_ping.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_ping.php", "content": "\t/* Linux */\n\t$cmd = \"/usr/bin/ping -c 1 -W 1 $ipaddr | grep -v PING | grep bytes\";\n}\nexec($cmd, $out, $ret);\n$res = $out[0];\nif ($res == \"\")\n\t$res = \"error: no response from $ipaddr\";\n", "preview_content": {"\t/* Linux */": 17, "\t$cmd = \"/usr/bin/ping -c 1 -W 1 $ipaddr | grep -v PING | grep bytes\";": 18, "}": 19, "exec($cmd, $out, $ret);": 20, "$res = $out[0];": 21, "if ($res == \"\")": 22, "\t$res = \"error: no response from $ipaddr\";": 23}, "line_content": {"exec($cmd, $out, $ret);": 20}, "view": false, "lock": false},{"id": 16, "name": "ajax_task.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_task.php", "content": "\n\t$nodes = array();\n\t// node list\n\texec(PANALOGEYE.\" node list | grep -v ipaddr\", $out, $ret);\n\tforeach($out as $val) {\n\t\tlist($ip, $uuid, $status) = explode(' ', $val);\n\t\tarray_push($nodes, array(\n", "preview_content": {"": 44, "\t$nodes = array();": 45, "\t// node list": 46, "\texec(PANALOGEYE.\" node list | grep -v ipaddr\", $out, $ret);": 47, "\tforeach($out as $val) {": 48, "\t\tlist($ip, $uuid, $status) = explode(' ', $val);": 49, "\t\tarray_push($nodes, array(": 50}, "line_content": {"exec(PANALOGEYE.\" node list | grep -v ipaddr\", $out, $ret);": 47}, "view": false, "lock": false},{"id": 26, "name": "ajax_tmpfile_mulexport.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\ajax_tmpfile_mulexport.php", "content": "\t\t\tif (file_exists($dfile))\n\t\t\t\tunlink($dfile);\n\t\t\t$cmd = \"$wget --no-check-certificate 'http://$nodeip:4816/tmp/$fname' -O $dfile -o /tmp/mulexport.log\"; // -o: \u5199\u5165\u65e5\u5fd7, -O: \u4fdd\u5b58\u81f3\u6587\u4ef6\n\t\t\texec($cmd);\n\t\t}\n\t\telse {\n\t\t       \t$dfile = CLUSTER_DIR.\"/tmp/\".$fname;\n", "preview_content": {"\t\t\tif (file_exists($dfile))": 54, "\t\t\t\tunlink($dfile);": 55, "\t\t\t$cmd = \"$wget --no-check-certificate 'http://$nodeip:4816/tmp/$fname' -O $dfile -o /tmp/mulexport.log\"; // -o: \u5199\u5165\u65e5\u5fd7, -O: \u4fdd\u5b58\u81f3\u6587\u4ef6": 56, "\t\t\texec($cmd);": 57, "\t\t}": 58, "\t\telse {": 59, "\t\t       \t$dfile = CLUSTER_DIR.\"/tmp/\".$fname;": 60}, "line_content": {"exec($cmd);": 57}, "view": false, "lock": false},{"id": 27, "name": "cluster_filelist.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\cluster_filelist.php", "content": "\n$isfree = 0;\n$cmd = PANALOGEYE.\" receiver stat tag=version\";\nexec($cmd, $out, $ret);\nif (strstr($out[0], \"version=0\") != false)\n\t$isfree = 1;\nunset($out);\n", "preview_content": {"": 8, "$isfree = 0;": 9, "$cmd = PANALOGEYE.\" receiver stat tag=version\";": 10, "exec($cmd, $out, $ret);": 11, "if (strstr($out[0], \"version=0\") != false)": 12, "\t$isfree = 1;": 13, "unset($out);": 14}, "line_content": {"exec($cmd, $out, $ret);": 11}, "view": false, "lock": false},{"id": 28, "name": "common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\common.php", "content": "\t$err2 = \"yes\";\n\n\t$cmd = \"/bin/df -h | grep logdata\";\n\texec($cmd, $out, $ret);\n\tif (empty($out)) {\n\t\t$err1 = \"no\";\n\t}\n", "preview_content": {"\t$err2 = \"yes\";": 1512, "": 1513, "\t$cmd = \"/bin/df -h | grep logdata\";": 1514, "\texec($cmd, $out, $ret);": 1515, "\tif (empty($out)) {": 1516, "\t\t$err1 = \"no\";": 1517, "\t}": 1518}, "line_content": {"exec($cmd, $out, $ret);": 1515}, "view": false, "lock": false},{"id": 29, "name": "common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\common.php", "content": "\t}\n\n\t$cmd = \"df -h /usr/logdata/data\";\n\texec($cmd, $out, $ret);\n\tif ($ret != 0)\n\t\t$err2 = \"no\";\n\n", "preview_content": {"\t}": 1518, "": 1524, "\t$cmd = \"df -h /usr/logdata/data\";": 1520, "\texec($cmd, $out, $ret);": 1521, "\tif ($ret != 0)": 1522, "\t\t$err2 = \"no\";": 1523}, "line_content": {"exec($cmd, $out, $ret);": 1521}, "view": false, "lock": false},{"id": 30, "name": "common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\common.php", "content": "{\n\t$ver = 0;\n\t$cmd = PANALOGEYE.\" receiver stat tag=version\";\n\texec($cmd, $out, $ret);\n\tforeach($out as $val) {\n\t\tif (strstr($val, \"version=1\") != false) {\n\t\t\t$ver = 1;\n", "preview_content": {"{": 1715, "\t$ver = 0;": 1716, "\t$cmd = PANALOGEYE.\" receiver stat tag=version\";": 1717, "\texec($cmd, $out, $ret);": 1718, "\tforeach($out as $val) {": 1719, "\t\tif (strstr($val, \"version=1\") != false) {": 1720, "\t\t\t$ver = 1;": 1721}, "line_content": {"exec($cmd, $out, $ret);": 1718}, "view": false, "lock": false},{"id": 35, "name": "common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\common.php", "content": "{\n\t$free = 1;\n\t$cmd = PANALOGEYE.\" receiver stat tag=version\";\n\texec($cmd, $out, $ret);\n\tforeach($out as $val) {\n\t\tif (strstr($val, \"version=1\") != false) {\n\t\t\t$free = 0;\n", "preview_content": {"{": 1731, "\t$free = 1;": 1732, "\t$cmd = PANALOGEYE.\" receiver stat tag=version\";": 1733, "\texec($cmd, $out, $ret);": 1734, "\tforeach($out as $val) {": 1735, "\t\tif (strstr($val, \"version=1\") != false) {": 1736, "\t\t\t$free = 0;": 1737}, "line_content": {"exec($cmd, $out, $ret);": 1734}, "view": false, "lock": false},{"id": 36, "name": "common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\common.php", "content": "\t\t\tif (($buf = fgets($fp)) != false) {\n\t\t\t\tif (strstr($buf, $path) != false) {\n\t\t\t\t\t$ds = explode(' ', $buf);\n\t\t\t\t\texec(\"kill \".$ds[0], $out, $ret);\n\t\t\t\t}\n\t\t\t}\n\t\t}\n", "preview_content": {"\t\t\tif (($buf = fgets($fp)) != false) {": 1751, "\t\t\t\tif (strstr($buf, $path) != false) {": 1752, "\t\t\t\t\t$ds = explode(' ', $buf);": 1753, "\t\t\t\t\texec(\"kill \".$ds[0], $out, $ret);": 1754, "\t\t\t\t}": 1755, "\t\t\t}": 1756, "\t\t}": 1757}, "line_content": {"exec(\"kill \".$ds[0], $out, $ret);": 1754}, "view": false, "lock": false},{"id": 37, "name": "common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\common.php", "content": "\t$nodelist = array();\n\n\t$cmd = PANALOGEYE.\" node list\";\n\texec($cmd, $out, $ret);\n\tforeach($out as $val) {\n\t\tlist($ipaddr, $ipaddr) = explode(' ', $val);\n\t\tif ($ipaddr == \"ipaddr\") continue;\n", "preview_content": {"\t$nodelist = array();": 1886, "": 1887, "\t$cmd = PANALOGEYE.\" node list\";": 1888, "\texec($cmd, $out, $ret);": 1889, "\tforeach($out as $val) {": 1890, "\t\tlist($ipaddr, $ipaddr) = explode(' ', $val);": 1891, "\t\tif ($ipaddr == \"ipaddr\") continue;": 1892}, "line_content": {"exec($cmd, $out, $ret);": 1889}, "view": false, "lock": false},{"id": 32, "name": "cpu.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\cpu.php", "content": "$ncpu = $cpu = $mem = $totalmem = $hper = $hsize = 0;\n\n$version = 0;\nexec(PANALOGEYE.\" receiver stat | grep version\", $out, $ret);\nforeach($out as $val) {\n\tlist($tag, $v) = explode('=', trim($val));\n\tif ($tag == \"version\") {\n", "preview_content": {"$ncpu = $cpu = $mem = $totalmem = $hper = $hsize = 0;": 10, "": 11, "$version = 0;": 12, "exec(PANALOGEYE.\" receiver stat | grep version\", $out, $ret);": 13, "foreach($out as $val) {": 14, "\tlist($tag, $v) = explode('=', trim($val));": 15, "\tif ($tag == \"version\") {": 16}, "line_content": {"exec(PANALOGEYE.\" receiver stat | grep version\", $out, $ret);": 13}, "view": false, "lock": false},{"id": 33, "name": "cpu.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\cpu.php", "content": "\t\tif (!$ipdata_checked) {\n\t\t\t$ip = \"/usr/logd/bin/ip_data.txt\";\n\t\t\tif (file_exists($ip))\n\t\t\t\texec(\"file $ip\", $out, $ret);\n\t\t\tif (is_array($out))\n\t\t\t\t$json[\"ipdata\"] = $out[0];\n\t\t}\n", "preview_content": {"\t\tif (!$ipdata_checked) {": 33, "\t\t\t$ip = \"/usr/logd/bin/ip_data.txt\";": 34, "\t\t\tif (file_exists($ip))": 35, "\t\t\t\texec(\"file $ip\", $out, $ret);": 36, "\t\t\tif (is_array($out))": 37, "\t\t\t\t$json[\"ipdata\"] = $out[0];": 38, "\t\t}": 39}, "line_content": {"exec(\"file $ip\", $out, $ret);": 36}, "view": false, "lock": false},{"id": 34, "name": "cpu.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\cpu.php", "content": "case 1:\t\t/* professional */\n\t$nodes = 0;\n\t$cmd = PANALOGEYE.\" node list\";\n\texec($cmd, $out, $ret);\n\tforeach($out as $val) {\n\t\tlist($ipaddr, $uuid, $status, $uptime, $cpu_count, $cpuper, $memsz, $memper, $hardsz, $hardper, $position) = explode(' ', trim($val));\n\t\tif ($ipaddr == \"ipaddr\") continue;\n", "preview_content": {"case 1:\t\t/* professional */": 52, "\t$nodes = 0;": 53, "\t$cmd = PANALOGEYE.\" node list\";": 54, "\texec($cmd, $out, $ret);": 55, "\tforeach($out as $val) {": 56, "\t\tlist($ipaddr, $uuid, $status, $uptime, $cpu_count, $cpuper, $memsz, $memper, $hardsz, $hardper, $position) = explode(' ', trim($val));": 57, "\t\tif ($ipaddr == \"ipaddr\") continue;": 58}, "line_content": {"exec($cmd, $out, $ret);": 55}, "view": false, "lock": false},{"id": 31, "name": "delefile.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\delefile.php", "content": "\n$allfile = isset($_REQUEST[\"allfile\"]) ? $_REQUEST[\"allfile\"] : 0;\nif ($allfile) {\n\texec(\"rm /usr/logdata/file_cluster/tmp/*\");\n}\n\n$filename = isset($_REQUEST[\"filename\"]) ? $_REQUEST[\"filename\"] : \"\";\n", "preview_content": {"": 12, "$allfile = isset($_REQUEST[\"allfile\"]) ? $_REQUEST[\"allfile\"] : 0;": 8, "if ($allfile) {": 9, "\texec(\"rm /usr/logdata/file_cluster/tmp/*\");": 10, "}": 11, "$filename = isset($_REQUEST[\"filename\"]) ? $_REQUEST[\"filename\"] : \"\";": 13}, "line_content": {"exec(\"rm /usr/logdata/file_cluster/tmp/*\");": 10}, "view": false, "lock": false},{"id": 38, "name": "fetchfile.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\fetchfile.php", "content": "\t$isfree = 0;\n\n\t$cmd = PANALOGEYE.\" receiver stat tag=version\";\n\texec($cmd, $out, $ret);\n\tif (strstr($out[0], \"version=0\") != false)\n\t\t$isfree = 1;\n       \tunset($out);\n", "preview_content": {"\t$isfree = 0;": 24, "": 25, "\t$cmd = PANALOGEYE.\" receiver stat tag=version\";": 26, "\texec($cmd, $out, $ret);": 27, "\tif (strstr($out[0], \"version=0\") != false)": 28, "\t\t$isfree = 1;": 29, "       \tunset($out);": 30}, "line_content": {"exec($cmd, $out, $ret);": 27}, "view": false, "lock": false},{"id": 39, "name": "fetchfile.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\fetchfile.php", "content": "       \tunset($out);\n\n\t/* Delete local file */\n\texec(\"rm /usr/logdata/file_cluster/tmp/*\");\n\n\t/* \u5220\u9664\u8282\u70b9 */\n\texec(PANALOGEYE.\" node list\", $out, $ret);\n", "preview_content": {"       \tunset($out);": 30, "": 34, "\t/* Delete local file */": 32, "\texec(\"rm /usr/logdata/file_cluster/tmp/*\");": 33, "\t/* \u5220\u9664\u8282\u70b9 */": 35, "\texec(PANALOGEYE.\" node list\", $out, $ret);": 36}, "line_content": {"exec(\"rm /usr/logdata/file_cluster/tmp/*\");": 33}, "view": false, "lock": false},{"id": 40, "name": "fetchfile.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\fetchfile.php", "content": "\texec(\"rm /usr/logdata/file_cluster/tmp/*\");\n\n\t/* \u5220\u9664\u8282\u70b9 */\n\texec(PANALOGEYE.\" node list\", $out, $ret);\n\tforeach($out as $val) {\n\t\t$ds = explode(' ', $val);\n\t\tif ($ds[0] == \"ipaddr\") continue;\n", "preview_content": {"\texec(\"rm /usr/logdata/file_cluster/tmp/*\");": 33, "": 34, "\t/* \u5220\u9664\u8282\u70b9 */": 35, "\texec(PANALOGEYE.\" node list\", $out, $ret);": 36, "\tforeach($out as $val) {": 37, "\t\t$ds = explode(' ', $val);": 38, "\t\tif ($ds[0] == \"ipaddr\") continue;": 39}, "line_content": {"exec(PANALOGEYE.\" node list\", $out, $ret);": 36}, "view": false, "lock": false},{"id": 41, "name": "fetchfile.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\fetchfile.php", "content": "\t\tfopen(\"http://\".$ds[0].\":4816/delefile.php?allfile=1\", \"r\");\n\t}\n}\nexec($cmd);\n?&gt;\n\n", "preview_content": {"\t\tfopen(\"http://\".$ds[0].\":4816/delefile.php?allfile=1\", \"r\");": 41, "\t}": 42, "}": 43, "exec($cmd);": 44, "?&gt;": 45, "": 46}, "line_content": {"exec($cmd);": 44}, "view": false, "lock": false},{"id": 43, "name": "hangxin_common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\hangxin_common.php", "content": "\t$ssoticket = addslashes(str_replace(\"+\", \"%2B\", $ssoticket));\n\n\t$tmpfile = \"/tmp/sso.txt\";\n\texec(\"fetch 'http://$client:8080/ssoWeb/validateTicket?ssoTicket=$ssoticket' -o $tmpfile\", $out, $ret);\n\tif (file_exists($tmpfile)) {\n\t\t$cont = file_get_contents($tmpfile);\n\t\t$json = json_decode($cont);\n", "preview_content": {"\t$ssoticket = addslashes(str_replace(\"+\", \"%2B\", $ssoticket));": 135, "": 136, "\t$tmpfile = \"/tmp/sso.txt\";": 137, "\texec(\"fetch 'http://$client:8080/ssoWeb/validateTicket?ssoTicket=$ssoticket' -o $tmpfile\", $out, $ret);": 138, "\tif (file_exists($tmpfile)) {": 139, "\t\t$cont = file_get_contents($tmpfile);": 140, "\t\t$json = json_decode($cont);": 141}, "line_content": {"exec(\"fetch 'http://$client:8080/ssoWeb/validateTicket?ssoTicket=$ssoticket' -o $tmpfile\", $out, $ret);": 138}, "view": false, "lock": false},{"id": 44, "name": "hangxin_common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\hangxin_common.php", "content": "function index_mysqlerror()\n{\n\t$cmd = \"/bin/df -h | grep logdata\";\n\texec($cmd, $out, $ret);\n\tif (empty($out)) {\n\t\t$err1 = \"no\";\n\t}\n", "preview_content": {"function index_mysqlerror()": 1375, "{": 1376, "\t$cmd = \"/bin/df -h | grep logdata\";": 1377, "\texec($cmd, $out, $ret);": 1378, "\tif (empty($out)) {": 1379, "\t\t$err1 = \"no\";": 1380, "\t}": 1381}, "line_content": {"exec($cmd, $out, $ret);": 1378}, "view": false, "lock": false},{"id": 45, "name": "hangxin_common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\hangxin_common.php", "content": "\t}\n\n\t$cmd = \"df -h /usr/logdata/data\";\n\texec($cmd, $out, $ret);\n\tif ($ret != 0)\n\t\t$err2 = \"no\";\n\n", "preview_content": {"\t}": 1381, "": 1387, "\t$cmd = \"df -h /usr/logdata/data\";": 1383, "\texec($cmd, $out, $ret);": 1384, "\tif ($ret != 0)": 1385, "\t\t$err2 = \"no\";": 1386}, "line_content": {"exec($cmd, $out, $ret);": 1384}, "view": false, "lock": false},{"id": 47, "name": "hangxin_common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\hangxin_common.php", "content": "{\n\t$free = 1;\n\t$cmd = PANALOGEYE.\" receiver stat tag=version\";\n\texec($cmd, $out, $ret);\n\tforeach($out as $val) {\n\t\tif (strstr($val, \"version=1\") != false) {\n\t\t\t$free = 0;\n", "preview_content": {"{": 1557, "\t$free = 1;": 1558, "\t$cmd = PANALOGEYE.\" receiver stat tag=version\";": 1559, "\texec($cmd, $out, $ret);": 1560, "\tforeach($out as $val) {": 1561, "\t\tif (strstr($val, \"version=1\") != false) {": 1562, "\t\t\t$free = 0;": 1563}, "line_content": {"exec($cmd, $out, $ret);": 1560}, "view": false, "lock": false},{"id": 52, "name": "hangxin_common.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\hangxin_common.php", "content": "\t\t\tif (($buf = fgets($fp)) != false) {\n\t\t\t\tif (strstr($buf, $path) != false) {\n\t\t\t\t\t$ds = explode(' ', $buf);\n\t\t\t\t\texec(\"kill \".$ds[0], $out, $ret);\n\t\t\t\t}\n\t\t\t}\n\t\t}\n", "preview_content": {"\t\t\tif (($buf = fgets($fp)) != false) {": 1576, "\t\t\t\tif (strstr($buf, $path) != false) {": 1577, "\t\t\t\t\t$ds = explode(' ', $buf);": 1578, "\t\t\t\t\texec(\"kill \".$ds[0], $out, $ret);": 1579, "\t\t\t\t}": 1580, "\t\t\t}": 1581, "\t\t}": 1582}, "line_content": {"exec(\"kill \".$ds[0], $out, $ret);": 1579}, "view": false, "lock": false},{"id": 42, "name": "hangxin_menu.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\hangxin_menu.php", "content": "\n$free = 1;\n$cmd = PANALOGEYE.\" receiver stat tag=version\";\nexec($cmd, $out, $ret);\nforeach($out as $val) {\n        if (strstr($val, \"version=1\") != false) {\n\t\t$free = 0;\n", "preview_content": {"": 81, "$free = 1;": 82, "$cmd = PANALOGEYE.\" receiver stat tag=version\";": 83, "exec($cmd, $out, $ret);": 84, "foreach($out as $val) {": 85, "        if (strstr($val, \"version=1\") != false) {": 86, "\t\t$free = 0;": 87}, "line_content": {"exec($cmd, $out, $ret);": 84}, "view": false, "lock": false},{"id": 46, "name": "hx_menu.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\hx_menu.php", "content": "\n$free = 1;\n$cmd = PANALOGEYE.\" receiver stat tag=version\";\nexec($cmd, $out, $ret);\nforeach($out as $val) {\n        if (strstr($val, \"version=1\") != false) {\n\t\t$free = 0;\n", "preview_content": {"": 89, "$free = 1;": 90, "$cmd = PANALOGEYE.\" receiver stat tag=version\";": 91, "exec($cmd, $out, $ret);": 92, "foreach($out as $val) {": 93, "        if (strstr($val, \"version=1\") != false) {": 94, "\t\t$free = 0;": 95}, "line_content": {"exec($cmd, $out, $ret);": 92}, "view": false, "lock": false},{"id": 49, "name": "kill.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\kill.php", "content": "$pid = isset($_POST[\"pid\"]) ? postval(\"pid\") : 0;\n$errfile = isset($_POST[\"errfile\"]) ? postval(\"errfile\") : \"\";\nif ($pid != 0) {\n\texec(\"ps ax | grep logeye | grep '$pid' | awk '{print $1}'\", $out, $ret);\n\tforeach($out as $val) {\n\t\tif ($val == $pid) {\n\t\t\tsystem(\"kill $pid\");\n", "preview_content": {"$pid = isset($_POST[\"pid\"]) ? postval(\"pid\") : 0;": 8, "$errfile = isset($_POST[\"errfile\"]) ? postval(\"errfile\") : \"\";": 9, "if ($pid != 0) {": 10, "\texec(\"ps ax | grep logeye | grep '$pid' | awk '{print $1}'\", $out, $ret);": 11, "\tforeach($out as $val) {": 12, "\t\tif ($val == $pid) {": 13, "\t\t\tsystem(\"kill $pid\");": 14}, "line_content": {"exec(\"ps ax | grep logeye | grep '$pid' | awk '{print $1}'\", $out, $ret);": 11}, "view": false, "lock": false},{"id": 50, "name": "mailcious_down_fornode.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\mailcious_down_fornode.php", "content": "\tif (!file_exists($markf)) {\n\t\tfile_put_contents($markf, \"fsize=$fsize\\nctime=$ctime\\n\");\n\t\tcopy($srcf, dirname(__FILE__).\"/mailcious-current.csv.\".$uuid);\n\t\texec(\"tar zcf $tarf mailcious-current.csv.\".$uuid);\n\t\tunlink(dirname(__FILE__).\"/mailcious-current.csv.\".$uuid);\n\t\tcopy($tarf, \"/usr/logdata/file_cluster/$tarf\");\n\t\techo 'YES';\n", "preview_content": {"\tif (!file_exists($markf)) {": 25, "\t\tfile_put_contents($markf, \"fsize=$fsize\\nctime=$ctime\\n\");": 26, "\t\tcopy($srcf, dirname(__FILE__).\"/mailcious-current.csv.\".$uuid);": 27, "\t\texec(\"tar zcf $tarf mailcious-current.csv.\".$uuid);": 28, "\t\tunlink(dirname(__FILE__).\"/mailcious-current.csv.\".$uuid);": 29, "\t\tcopy($tarf, \"/usr/logdata/file_cluster/$tarf\");": 30, "\t\techo 'YES';": 31}, "line_content": {"exec(\"tar zcf $tarf mailcious-current.csv.\".$uuid);": 28}, "view": false, "lock": false},{"id": 51, "name": "mailcious_down_fornode.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\mailcious_down_fornode.php", "content": "\tif (file_exists($s))\n\t\tunlink($s);\n\tcopy($srcf, $s);\n\texec(\"tar zcf $tarf mailcious-current.csv.\".$uuid);\n\tunlink($s);\n\tcopy($tarf, \"/usr/logdata/file_cluster/$tarf\");\n\tfile_put_contents($markf, \"fsize=$fsize\\nctime=$ctime\\n\");\n", "preview_content": {"\tif (file_exists($s))": 52, "\t\tunlink($s);": 53, "\tcopy($srcf, $s);": 54, "\texec(\"tar zcf $tarf mailcious-current.csv.\".$uuid);": 55, "\tunlink($s);": 56, "\tcopy($tarf, \"/usr/logdata/file_cluster/$tarf\");": 57, "\tfile_put_contents($markf, \"fsize=$fsize\\nctime=$ctime\\n\");": 58}, "line_content": {"exec(\"tar zcf $tarf mailcious-current.csv.\".$uuid);": 55}, "view": false, "lock": false},{"id": 48, "name": "menu.php", "path": "F:\\\u6d4b\u8bd5\u7a0b\u5e8f\\\u6e90\u7801\\panabit_new\\usr\\logd\\www\\menu.php", "content": "$free = 1;\n$gtp = 0;\n$cmd = PANALOGEYE.\" receiver stat\";\nexec($cmd, $out, $ret);\nforeach($out as $val) {\n        if (strstr($val, \"version=1\") != false) {\n\t\t$free = 0;\n", "preview_content": {"$free = 1;": 92, "$gtp = 0;": 93, "$cmd = PANALOGEYE.\" receiver stat\";": 94, "exec($cmd, $out, $ret);": 95, "foreach($out as $val) {": 96, "        if (strstr($val, \"version=1\") != false) {": 97, "\t\t$free = 0;": 98}, "line_content": {"exec($cmd, $out, $ret);": 95}, "view": false, "lock": false})
+</script>

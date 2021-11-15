@@ -1,0 +1,313 @@
+<link rel="stylesheet" href="../css/bootstrap.min.css">
+<script src="../js/jquery.js"></script>
+<script src="../js/vue.js"></script>
+<style>
+    .panel {
+        word-wrap: break-word;
+
+        word-break: keep-all;
+
+        overflow: hidden;
+    }
+
+    th {
+        text-align: center;
+        font-weight: normal;
+        font-size: 14px;
+
+    }
+
+    th:hover {
+        background-color: #ccdde6;
+    }
+
+    td {
+        text-align: center;
+        font-weight: normal;
+        font-size: 14px;
+
+    }
+
+    a.navbar-brand {
+        color: white;
+    }
+
+    a.navbar-brand:hover {
+        text-decoration: none
+    }
+
+    a:link {
+        color: inherit;
+        text-decoration: none
+    }
+
+    .filter-label {
+        height: 10px;
+        font-size: small;
+        margin-top: 3px;
+    }
+
+    div .view-text {
+        text-align: left;
+        overflow-y: auto;
+    }
+
+    .view-btn {
+        text-align: right;
+        font-size: medium;
+        color: #d9534f;
+    }
+
+    span.view-text {
+        border: 1px solid #9d9d9d;
+        border-radius: 4px;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .emphasize {
+        color: #d9534f;
+    }
+
+    .line {
+        color: #9d9d9d;
+    }
+
+    .name-label {
+        font-weight: normal;
+        margin-top: 5px;
+    }
+
+    .file-name {
+        font-weight: bold;
+    }
+
+    .file-path {
+        color: chocolate;
+        text-align: left;
+    }
+</style>
+
+
+<div id="app">
+    <div class="navbar navbar-fixed-top"
+         style="position: fixed; height:60px ;z-index: 10000; width: 100%; background: rgb(8, 103, 193) none repeat scroll 0% 0%;">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#" style="color:white; margin-top: 4px">File Analysis Result</a>
+        </div>
+    </div>
+
+
+    <div class="container-fluid" style="width: 95%; margin-top: 50px">
+        <div class="panel panel-default" style="margin-top: 50px">
+            <div class="panel-heading" style="background-color: white; border-bottom: none">
+
+
+                <!--过滤标签区域-->
+                <div class="col-md-4">
+                    <span style="font-size: larger; margin-right: 3px; margin-left: -10px">
+                    过滤关键词</span>
+                    <label class="label label-info filter-label"><a
+                            href="javascript:void(0)"><span class="glyphicon glyphicon-record"></span>
+                        {{major_key}}</a></label>
+                    <template v-for="key in include_keys">
+                        <label class="label label-success filter-label" @click="del_in_key(key)"><a
+                                href="javascript:void(0)" style="margin-left: 3px">
+                            <span class=" glyphicon glyphicon-triangle-top"></span> {{key}}
+                            &times;</a></label>&nbsp;
+                    </template>
+                    <template v-for="key in exclude_keys">
+                        <label class="label label-danger label-lg filter-label" @click="del_ex_key(key)"><a
+                                href="javascript:void(0)" style="margin-right: 3px">
+                            <span class="glyphicon glyphicon-triangle-bottom"></span> {{key}}
+                            &times;</a></label>&nbsp;
+                    </template>
+                </div>
+
+                <!--新增过滤区域-->
+                <div class="pull-right col-md-8">
+                    <div class="col-md-1">
+                        <label class="name-label">文件名</label>
+                        <!--                        <span class="glyphicon glyphicon-play-circle"></span>-->
+                    </div>
+                    <div class="col-md-3">
+                        <input class="pull-right form-control" v-model="target_file"/>
+                    </div>
+
+                    <div class="col-md-3">
+                        <input class="pull-right form-control" v-model="include_key" @keyup.enter="add_in_key"/>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-default text-primary" style="color: #337ab7" @click="add_in_key">
+                            包含
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <input class="pull-right form-control" v-model="exclude_key" @keyup.enter="add_ex_key"/>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-default" style="color: #d9534f" @click="add_ex_key">不含</button>
+                    </div>
+                </div>
+
+            </div>
+            <div class="panel-body"></div>
+            <table class="table table-responsive">
+                <tr class="alert-info" style="color: black">
+                    <th class="col-md-1">序号</th>
+                    <th class="col-md-2">文件名</th>
+                    <th class="col-md-3">文件路径</th>
+                    <th class="col-md-6">预览</th>
+                </tr>
+                <template v-for="(file, index) in search">
+                    <tr @mouseover="mouseOver(file)" @mouseleave="mouseLeave(file)" @click="fix_file(file)">
+                        <td>
+                            <span class="col-md-1 col-md-pull-1">
+                            <span class="glyphicon glyphicon-lock text-left" v-if="file.lock"
+                                  style="color: #d9534f"></span>
+                            </span>
+                            <span class="col-md-8 col-md-pull-2">
+                            {{index+1}}
+                            </span>
+                        </td>
+                        <td class="file-name">{{ file.name }}</td>
+                        <td class="file-path">{{file.path}}</td>
+                        <td class="view-text">
+
+
+                            <div class="view-btn col-md-1"><a style="color: inherit; display: block"
+                                                              href="javascript:void(0)" class="extend-icon">
+                                <span class="glyphicon glyphicon-expand" v-if="!file.view"></span>
+                                <span class="glyphicon glyphicon-collapse-down" v-else></span>
+                            </a></div>
+
+
+                            <div class="view-text col-md-11">
+                                <!--单行内容-->
+                                <span class="preview-text" v-html="switch_key_str(file.pre_content)"
+                                      v-if="!file.view"></span>
+                                <!--预览内容-->
+                                <span class="view-text" style="display: block; height: 160px;"
+                                      v-html="switch_key_str(file.content)" v-if="file.view"></span>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+            </table>
+
+        </div>
+    </div>
+</div>
+<script>
+    <!--格式化关键字符串-->
+    Vue.prototype.switch_key_str = function (value) {
+        while (value.includes("  ")) {
+            value = value.replace("  ", "&nbsp;&nbsp;")
+        }
+        while (value.includes("\t")) {
+            value = value.replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;")
+        }
+        if (root.reg_cap) {
+            value = value.replaceAll(root.major_key, "<span class='emphasize'>" + root.major_key + "</span>")
+        } else {
+            key_list = [root.major_key]
+            var index = value.toLowerCase().indexOf(root.major_key)
+            while (index !== -1) {
+                if (value.substring(index, index + root.major_key.length) !== root.major_key && !(key_list.includes(value.substring(index, index + root.major_key.length))))
+                    key_list.push(value.substring(index, index + root.major_key.length))
+                index = value.toLowerCase().indexOf(root.major_key, index + root.major_key.length)
+            }
+            // alert(root.major_key);
+            for (i in key_list) {
+                value = value.replaceAll(key_list[i], "<span class='emphasize'>" + key_list[i] + "</span>")
+            }
+        }
+        for (i in root.include_keys) {
+            value = value.replaceAll(root.include_keys[i], "<span class='emphasize'>" + root.include_keys[i] + "</span>")
+        }
+        return value
+    }
+    var root = new Vue({
+        el: '#app',
+        data: {
+            major_key: "wx.upploadFile",
+            include_keys: [],
+            exclude_keys: [],
+            include_key: "",
+            exclude_key: "",
+            target_file: "",
+            files: [],
+            reg_cap: true
+        },
+        methods: {
+            mouseOver: function (file) {
+                file.view = true
+            },
+            mouseLeave: function (file) {
+                if (!file.lock) {
+                    file.view = false
+                }
+            },
+            add_in_key: function () {
+                if (!(this.include_keys.includes(this.include_key)) && this.include_key) {
+                    this.include_keys.push(this.include_key);
+                }
+                this.include_key = ""
+            },
+            add_ex_key: function () {
+                if (!(this.exclude_keys.includes(this.exclude_key)) && this.exclude_key) {
+                    this.exclude_keys.push(this.exclude_key);
+                }
+                this.exclude_key = ""
+            },
+            del_in_key: function (key) {
+                this.include_keys.pop(key);
+            },
+            del_ex_key: function (key) {
+                this.exclude_keys.pop(key);
+            },
+            fix_file: function (file) {
+                file.lock = !file.lock
+            }
+        },
+        computed: {
+            search: function () {
+                var files = this.files.filter(ele => {
+                    var filter = true;
+                    if (this.include_keys) {
+                        if (!ele.content.includes(this.include_key)) {
+                            filter = false
+                        }
+                    }
+                    if (this.exclude_key) {
+                        if (ele.content.includes(this.exclude_key)) {
+                            filter = false
+                        }
+                    }
+                    if (this.target_file) {
+                        if (!ele.name.includes(this.target_file)) {
+                            filter = false
+                        }
+                    }
+                    for (i in this.include_keys) {
+                        if (!ele.content.includes(this.include_keys[i])) {
+                            filter = false
+                        }
+                    }
+                    for (i in this.exclude_keys) {
+                        if (ele.content.includes(this.exclude_keys[i]) || ele.path.includes(this.exclude_keys[i])) {
+                            filter = false
+                        }
+                    }
+                    return filter
+                })
+                return files
+            }
+        },
+    })
+
+
+    root.files.push()
+</script>
