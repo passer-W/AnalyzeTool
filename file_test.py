@@ -169,6 +169,8 @@ def get_temp_html():
 
 
 def analyze_file():
+    if not os.path.exists("result"):
+        os.mkdir("result")
     analyze_list = []
     for r, d, fs in os.walk(root_dir):
         for f in fs:
