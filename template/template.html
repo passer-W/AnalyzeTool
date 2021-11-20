@@ -94,6 +94,12 @@
         text-align: left;
     }
 
+    table {
+        table-layout: fixed;
+        word-break: break-all;
+        word-wrap: break-word;
+    }
+
     /*.copy-icon {*/
     /*    color: #dff0d8;*/
     /*}*/
@@ -193,8 +199,9 @@
                             {{index+1}}
                             </span>
                         </td>
-                        <td class="file-name" v-bind:class="{ 'file-bold': file.view }" @mouseover="copy(file, 'name', 1)"
-                                  @mouseleave="copy(file, 'name', 0)">
+                        <td class="file-name" v-bind:class="{ 'file-bold': file.view }"
+                            @mouseover="copy(file, 'name', 1)"
+                            @mouseleave="copy(file, 'name', 0)">
                             <span style="display: block">
                                 {{ file.name }}
                                 <span href="javascript:void(0)" class="copy"
@@ -205,10 +212,11 @@
                                         v-on:click="copy(file, 'name', 2)"></span></span>
                             </span>
                         </td>
-                        <td class="file-path" v-bind:class="{ 'file-bold': file.view }" @mouseover="copy(file, 'path', 1)"
-                                  @mouseleave="copy(file, 'path', 0)">
+                        <td class="file-path" v-bind:class="{ 'file-bold': file.view }"
+                            @mouseover="copy(file, 'path', 1)"
+                            @mouseleave="copy(file, 'path', 0)">
                             <span href="javascript:void(0)"
-                                  style="display: block" >
+                                  style="display: block">
                                 {{file.path}}
                                 <span href="javascript:void(0)" class="copy"
                                       v-bind:data-clipboard-text="file.path"><span
@@ -245,7 +253,7 @@
                                     </div>
                                 </div>
                                 <!--行内容-->
-                                <div class="line-text col-md-10">
+                                <div class="line-text col-md-9">
                                     <!--单行内容-->
                                     <div class="line-text col-md-12" v-if="!file.view">
                                         <template v-for="(value, key) in file.line_content">
@@ -257,11 +265,16 @@
                                     <div class="preview-text col-md-12" style="display: block; height: 160px;"
                                          v-if="file.view">
                                         <template v-for="(value, key) in file.preview_content">
-                                        <span v-html="switch_key_str(key)">
-                                        </span>
+                                                <span v-html="switch_key_str(key)">
+                                                </span>
                                             <br>
                                         </template>
                                     </div>
+                                </div>
+                                <div class="delete-ico col-md-1">
+                                    <a href="javascript:void(0)" @click="delete_file(index)">
+                                        <span class="glyphicon glyphicon-trash"></span>
+                                    </a>
                                 </div>
                             </div>
                         </td>
@@ -347,15 +360,18 @@
             },
             copy: function (file, attr, times) {
                 if (attr === "name") {
-                    if(times!==0 && times< file.name_copy)
+                    if (times !== 0 && times < file.name_copy)
                         return
                     file.name_copy = times
                 } else {
-                    if(times!==0 && times< file.path_copy)
+                    if (times !== 0 && times < file.path_copy)
                         return
                     file.path_copy = times
                 }
                 console.log(times)
+            },
+            delete_file: function (index) {
+                this.files.splice(index, 1)
             }
         },
         computed: {
@@ -373,7 +389,7 @@
                         }
                     }
                     if (this.target_file) {
-                        if (!ele.name.includes(this.target_file)) {
+                        if (!ele.path.includes(this.target_file)) {
                             filter = false
                         }
                     }
